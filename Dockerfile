@@ -33,8 +33,12 @@ RUN git clone https://github.com/hyson666/pdf-rag-mcp-server.git .
 RUN uv pip install --system -r backend/requirements.txt
 RUN uv pip install --system fastapi-mcp
 
-# Copy built frontend production bundles from Stage 1 into the backend static file routing map
+# Copy built frontend production bundles into the backend static file routing map
 COPY --from=frontend-builder /app/frontend/dist ./backend/static
 
+# Path corrections so Python finds the "app" module correctly
+WORKDIR /app/backend
+ENV PYTHONPATH=/app/backend
+
 EXPOSE 8000
-CMD ["python", "-m", "uvicorn", "backend.app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["python", "-m", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
