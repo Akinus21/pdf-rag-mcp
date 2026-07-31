@@ -1,34 +1,39 @@
-# Stage 1: Build the React Frontend
+# Stage 1: Clone the source and build the React Frontend
 FROM node:20-alpine AS frontend-builder
+WORKDIR /app
+
+# Install git to download the target code dynamically
+RUN apk add --no-cache git
+
+# Clone the target repository directly inside the build runner environment
+RUN git clone https://github.com/hyson666/pdf-rag-mcp-server.git .
+
+# Move to the cloned frontend subdirectory and compile assets
 WORKDIR /app/frontend
-COPY frontend/package.json ./
 RUN npm install
-COPY frontend/ ./
 RUN npm run build
 
 # Stage 2: Build the FastAPI Backend System
 FROM ghcr.io/astral-sh/uv:python3.11-bookworm-slim
 WORKDIR /app
 
-# Install standard compilation and network tools
+# Install standard compilation and network dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
     bash \
     curl \
+    git \
     build-essential \
     libffi-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy backend definitions and install core requirements
-COPY backend/requirements.txt ./backend/
-RUN uv pip install --system -r backend/requirements.txt
+# Re-clone the repository to acquire clean backend script hierarchies
+RUN git clone https://github.com/hyson666/pdf-rag-mcp-server.git .
 
-# CRITICAL FIX: Explicitly install the missing MCP framework module
+# Install Python requirements via uv
+RUN uv pip install --system -r backend/requirements.txt
 RUN uv pip install --system fastapi-mcp
 
-# Copy backend codebase
-COPY backend/ ./backend/
-
-# Copy built frontend assets directly into the FastAPI static files directory
+# Copy built frontend production bundles from Stage 1 into the backend static file routing map
 COPY --from=frontend-builder /app/frontend/dist ./backend/static
 
 EXPOSE 8000
